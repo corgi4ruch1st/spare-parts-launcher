@@ -86,6 +86,8 @@
       });
 
       // ---------- แถบชวนติดตั้ง / เปิดแจ้งเตือน ----------
+      // เปิดลิงก์ ...#notify = เอาแถบที่เคยกด ✕ ปิดไว้กลับมา
+      if (/#notify/.test(location.hash)) ['install', 'ios', 'push'].forEach(function (k) { ls.set('sparts_hide_' + k, null); });
       var installEvt = null;
       var standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
       var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
