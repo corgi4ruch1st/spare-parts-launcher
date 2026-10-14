@@ -2,15 +2,26 @@
 <html lang="th">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>น้องเฟือง · ระบบอะไหล่</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%99%EF%B8%8F%3C/text%3E%3C/svg%3E">
-<meta name="theme-color" content="#ffd166">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="น้องเฟือง">
+<meta name="theme-color" content="#fff7ec">
 <style>
   html, body { margin:0; height:100%; background:#fff7ec; font-family:system-ui,sans-serif; }
   iframe { position:fixed; inset:0; width:100%; height:100%; border:0; }
   .fb { position:fixed; left:0; right:0; bottom:0; padding:8px; text-align:center; font-size:13px; background:rgba(255,255,255,.92); display:none; }
   .fb a { color:#5a4a5a; font-weight:600; }
+  /* แถบเชิญติดตั้งแอป / เปิดแจ้งเตือน (ต้องอยู่หน้านี้ เพราะในกรอบติดตั้ง/ขอสิทธิ์แจ้งเตือนไม่ได้) */
+  #bar { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom)); z-index:9;
+    display:none; align-items:center; gap:8px; max-width:calc(100vw - 24px); background:#5a4a5a; color:#fff;
+    border-radius:99px; padding:8px 8px 8px 16px; font-size:14px; box-shadow:0 6px 20px rgba(0,0,0,.2); }
+  #bar button { font:inherit; border:0; border-radius:99px; padding:7px 14px; cursor:pointer; }
+  #bb { background:#ffd166; color:#5a4a5a; font-weight:700; }
+  #bx { background:transparent; color:#fff; padding:7px 9px; }
 </style>
 </head>
 <body>
@@ -20,11 +31,37 @@
     src="https://script.google.com/macros/s/AKfycbzacfRQbqEy2MwlvbeEyUF6ELx-Tdo2AbP8Tu9QgPdYquuFI3BP3hshiQV3K10vcW3pHg/exec"></iframe>
   <div class="fb" id="fb">ถ้าหน้าแอปไม่ขึ้น
     <a href="https://script.google.com/macros/s/AKfycbzacfRQbqEy2MwlvbeEyUF6ELx-Tdo2AbP8Tu9QgPdYquuFI3BP3hshiQV3K10vcW3pHg/exec" target="_top">กดเปิดแบบเต็มหน้าที่นี่</a></div>
+  <div id="bar"><span id="bt"></span><button id="bb"></button><button id="bx" aria-label="ปิด">✕</button></div>
   <script>
     (function () {
       if (window.top !== window) { document.body.innerHTML = ''; return; } // ห้ามถูกฝังในเว็บอื่น กันขอ token
+
+      // OneSignal App ID (ไม่ใช่ความลับ) — ว่าง = ปิดการแจ้งเตือน ใช้แค่ติดตั้งแอป
+      var ONESIGNAL_APP_ID = '';
       var KEY = 'sparts_token', frame = document.getElementById('app');
-      // กรอบที่ไม่ส่งบัญชี Google ลืม storage ทุกครั้ง → เก็บ token ไว้ที่หน้านี้
+      var BASE = location.pathname.replace(/[^/]*$/, ''); // เช่น /spare-parts-launcher/
+      var ls = { get: function (k) { try { return localStorage.getItem(k); } catch (x) {} },
+                 set: function (k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (x) {} } };
+
+      // ---------- service worker + OneSignal ----------
+      var osReady = null, user = null;
+      if (ONESIGNAL_APP_ID) {
+        window.OneSignalDeferred = window.OneSignalDeferred || [];
+        osReady = new Promise(function (ok) {
+          OneSignalDeferred.push(function (OS) {
+            return OS.init({ appId: ONESIGNAL_APP_ID, serviceWorkerPath: BASE.slice(1) + 'OneSignalSDKWorker.js',
+              serviceWorkerParam: { scope: BASE } }).then(function () { ok(OS); });
+          });
+        });
+        var s = document.createElement('script');
+        s.src = 'https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js'; s.defer = true;
+        document.head.appendChild(s);
+        osReady.then(function (OS) { OS.Notifications.addEventListener('permissionChange', bar); bar(); });
+      } else if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('OneSignalSDKWorker.js', { scope: BASE }); // ให้ติดตั้งเป็นแอปได้
+      }
+
+      // ---------- คุยกับแอปในกรอบ ----------
       function fromOurFrame(e) {
         if (!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(e.origin)) return false;
         var w = e.source;
@@ -37,14 +74,47 @@
       }
       window.addEventListener('message', function (e) {
         if (!e.data || typeof e.data.sparts !== 'string' || !fromOurFrame(e)) return;
-        if (e.data.sparts === 'get-token') {
-          var t = null;
-          try { t = localStorage.getItem(KEY); } catch (x) {}
-          e.source.postMessage({ sparts: 'token', token: t }, e.origin);
-        } else if (e.data.sparts === 'set-token') {
-          try { e.data.token ? localStorage.setItem(KEY, String(e.data.token)) : localStorage.removeItem(KEY); } catch (x) {}
+        var m = e.data;
+        if (m.sparts === 'get-token') e.source.postMessage({ sparts: 'token', token: ls.get(KEY) || null }, e.origin);
+        else if (m.sparts === 'set-token') ls.set(KEY, m.token ? String(m.token) : null);
+        else if (m.sparts === 'user') {
+          user = m.username ? String(m.username) : null;
+          if (osReady) osReady.then(function (OS) { return user ? OS.login(user) : OS.logout(); }).catch(function () {});
+          bar();
         }
       });
+
+      // ---------- แถบชวนติดตั้ง / เปิดแจ้งเตือน ----------
+      var installEvt = null;
+      var standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+      var ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
+      window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installEvt = e; bar(); });
+      window.addEventListener('appinstalled', function () { installEvt = null; bar(); });
+
+      function show(kind, text, btn, act) {
+        var b = document.getElementById('bar');
+        if (!kind || ls.get('sparts_hide_' + kind)) { b.style.display = 'none'; return; }
+        document.getElementById('bt').textContent = text;
+        var bb = document.getElementById('bb');
+        bb.style.display = btn ? '' : 'none'; bb.textContent = btn || ''; bb.onclick = act;
+        document.getElementById('bx').onclick = function () { ls.set('sparts_hide_' + kind, '1'); b.style.display = 'none'; };
+        b.style.display = 'flex';
+      }
+      function bar() {
+        if (!standalone && installEvt)
+          return show('install', '📲 ติดตั้งน้องเฟืองเป็นแอป', 'ติดตั้ง', function () {
+            installEvt.prompt(); installEvt.userChoice.then(function () { installEvt = null; bar(); });
+          });
+        if (!standalone && ios)
+          return show('ios', '📲 ติดตั้งแอป: กดปุ่มแชร์ ⬆️ แล้ว "เพิ่มไปยังหน้าจอโฮม"');
+        if (osReady && user && 'Notification' in window && Notification.permission === 'default')
+          return show('push', '🔔 รับแจ้งเตือนเมื่อมีรายการอนุมัติ', 'เปิด', function () {
+            osReady.then(function (OS) { return OS.Notifications.requestPermission(); }).then(bar);
+          });
+        show(null);
+      }
+      bar();
+
       var loaded = false;
       frame.onload = function () { loaded = true; };
       setTimeout(function () { if (!loaded) document.getElementById('fb').style.display = 'block'; }, 20000);
