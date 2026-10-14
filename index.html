@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>น้องเฟือง · ระบบอะไหล่</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%99%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#ffd166">
+<style>
+  html, body { margin:0; height:100%; background:#fff7ec; font-family:system-ui,sans-serif; }
+  iframe { position:fixed; inset:0; width:100%; height:100%; border:0; }
+  .fb { position:fixed; left:0; right:0; bottom:0; padding:8px; text-align:center; font-size:13px; background:rgba(255,255,255,.92); display:none; }
+  .fb a { color:#5a4a5a; font-weight:600; }
+</style>
+</head>
+<body>
+  <!-- credentialless = ไม่ส่งบัญชี Google เข้ากรอบ กันบั๊ก /u/N/ ตอนเบราว์เซอร์ล็อกอินหลายบัญชี
+       (เข้าระบบด้วยชื่อผู้ใช้ + PIN ของระบบเอง ไม่ใช้บัญชี Google) -->
+  <iframe id="app" credentialless title="ระบบอะไหล่" allow="clipboard-write"
+    src="https://script.google.com/macros/s/AKfycbzacfRQbqEy2MwlvbeEyUF6ELx-Tdo2AbP8Tu9QgPdYquuFI3BP3hshiQV3K10vcW3pHg/exec"></iframe>
+  <div class="fb" id="fb">ถ้าหน้าแอปไม่ขึ้น
+    <a href="https://script.google.com/macros/s/AKfycbzacfRQbqEy2MwlvbeEyUF6ELx-Tdo2AbP8Tu9QgPdYquuFI3BP3hshiQV3K10vcW3pHg/exec" target="_top">กดเปิดแบบเต็มหน้าที่นี่</a></div>
+  <script>
+    (function () {
+      if (window.top !== window) { document.body.innerHTML = ''; return; } // ห้ามถูกฝังในเว็บอื่น กันขอ token
+      var KEY = 'sparts_token', frame = document.getElementById('app');
+      // กรอบที่ไม่ส่งบัญชี Google ลืม storage ทุกครั้ง → เก็บ token ไว้ที่หน้านี้
+      function fromOurFrame(e) {
+        if (!/^https:\/\/[a-z0-9-]+\.googleusercontent\.com$/.test(e.origin)) return false;
+        var w = e.source;
+        for (var i = 0; i < 6 && w; i++) {
+          if (w === frame.contentWindow) return true;
+          if (w === w.parent) return false;
+          w = w.parent;
+        }
+        return false;
+      }
+      window.addEventListener('message', function (e) {
+        if (!e.data || typeof e.data.sparts !== 'string' || !fromOurFrame(e)) return;
+        if (e.data.sparts === 'get-token') {
+          var t = null;
+          try { t = localStorage.getItem(KEY); } catch (x) {}
+          e.source.postMessage({ sparts: 'token', token: t }, e.origin);
+        } else if (e.data.sparts === 'set-token') {
+          try { e.data.token ? localStorage.setItem(KEY, String(e.data.token)) : localStorage.removeItem(KEY); } catch (x) {}
+        }
+      });
+      var loaded = false;
+      frame.onload = function () { loaded = true; };
+      setTimeout(function () { if (!loaded) document.getElementById('fb').style.display = 'block'; }, 20000);
+    })();
+  </script>
+</body>
+</html>
