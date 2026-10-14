@@ -37,7 +37,7 @@
       if (window.top !== window) { document.body.innerHTML = ''; return; } // ห้ามถูกฝังในเว็บอื่น กันขอ token
 
       // OneSignal App ID (ไม่ใช่ความลับ) — ว่าง = ปิดการแจ้งเตือน ใช้แค่ติดตั้งแอป
-      var ONESIGNAL_APP_ID = '';
+      var ONESIGNAL_APP_ID = 'bccfbd7e-c38f-4ee4-b632-0c7bf2f66a38';
       var KEY = 'sparts_token', frame = document.getElementById('app');
       var BASE = location.pathname.replace(/[^/]*$/, ''); // เช่น /spare-parts-launcher/
       var ls = { get: function (k) { try { return localStorage.getItem(k); } catch (x) {} },
