@@ -16,10 +16,13 @@
   .fb { position:fixed; left:0; right:0; bottom:0; padding:8px; text-align:center; font-size:13px; background:rgba(255,255,255,.92); display:none; }
   .fb a { color:#5a4a5a; font-weight:600; }
   /* แถบเชิญติดตั้งแอป / เปิดแจ้งเตือน (ต้องอยู่หน้านี้ เพราะในกรอบติดตั้ง/ขอสิทธิ์แจ้งเตือนไม่ได้) */
-  #bar { position:fixed; left:50%; transform:translateX(-50%); bottom:calc(84px + env(safe-area-inset-bottom)); z-index:9;
-    display:none; align-items:center; gap:8px; max-width:calc(100vw - 24px); background:#5a4a5a; color:#fff;
-    border-radius:99px; padding:8px 8px 8px 16px; font-size:14px; box-shadow:0 6px 20px rgba(0,0,0,.2); }
-  #bar button { font:inherit; border:0; border-radius:99px; padding:7px 14px; cursor:pointer; }
+  /* left/right:0 + margin auto + max-content = กว้างพอดีเนื้อหา (ห้ามใช้ left:50% — จะเหลือที่ให้ข้อความแค่ครึ่งจอจนโดนบีบ) */
+  #bar { position:fixed; left:0; right:0; margin:0 auto; width:max-content; max-width:calc(100vw - 24px); box-sizing:border-box;
+    bottom:calc(92px + env(safe-area-inset-bottom)); z-index:9; /* เหนือเมนูล่างของแอปในกรอบ */
+    display:none; align-items:center; gap:10px; background:#5a4a5a; color:#fff;
+    border-radius:20px; padding:10px 10px 10px 16px; font-size:14px; line-height:1.4; box-shadow:0 6px 20px rgba(0,0,0,.2); }
+  #bt { flex:1; min-width:0; }
+  #bar button { font:inherit; border:0; border-radius:99px; padding:8px 14px; cursor:pointer; white-space:nowrap; flex:none; }
   #bb { background:#ffd166; color:#5a4a5a; font-weight:700; }
   #bx { background:transparent; color:#fff; padding:7px 9px; }
 </style>
