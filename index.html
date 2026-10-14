@@ -49,7 +49,7 @@
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         osReady = new Promise(function (ok) {
           OneSignalDeferred.push(function (OS) {
-            return OS.init({ appId: ONESIGNAL_APP_ID, serviceWorkerPath: BASE.slice(1) + 'OneSignalSDKWorker.js',
+            return OS.init({ appId: ONESIGNAL_APP_ID, safari_web_id: 'web.onesignal.auto.336e9d4c-289f-452d-8560-a451da3453b9', serviceWorkerPath: BASE.slice(1) + 'OneSignalSDKWorker.js',
               serviceWorkerParam: { scope: BASE } }).then(function () { osOk = true; ok(OS); })
               .catch(function (e) { console.error('OneSignal init failed:', e); }); // ไม่ resolve = ไม่โชว์แถบ 🔔
           });
