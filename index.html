@@ -44,13 +44,14 @@
                  set: function (k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (x) {} } };
 
       // ---------- service worker + OneSignal ----------
-      var osReady = null, user = null;
+      var osReady = null, osOk = false, user = null; // osOk = init สำเร็จ (ถ้า dashboard ตั้งค่าไม่ครบ init จะ reject)
       if (ONESIGNAL_APP_ID) {
         window.OneSignalDeferred = window.OneSignalDeferred || [];
         osReady = new Promise(function (ok) {
           OneSignalDeferred.push(function (OS) {
             return OS.init({ appId: ONESIGNAL_APP_ID, serviceWorkerPath: BASE.slice(1) + 'OneSignalSDKWorker.js',
-              serviceWorkerParam: { scope: BASE } }).then(function () { ok(OS); });
+              serviceWorkerParam: { scope: BASE } }).then(function () { osOk = true; ok(OS); })
+              .catch(function (e) { console.error('OneSignal init failed:', e); }); // ไม่ resolve = ไม่โชว์แถบ 🔔
           });
         });
         var s = document.createElement('script');
@@ -107,9 +108,12 @@
           });
         if (!standalone && ios)
           return show('ios', '📲 ติดตั้งแอป: กดปุ่มแชร์ ⬆️ แล้ว "เพิ่มไปยังหน้าจอโฮม"');
-        if (osReady && user && 'Notification' in window && Notification.permission === 'default')
+        if (osOk && user && 'Notification' in window && Notification.permission === 'default')
           return show('push', '🔔 รับแจ้งเตือนเมื่อมีรายการอนุมัติ', 'เปิด', function () {
-            osReady.then(function (OS) { return OS.Notifications.requestPermission(); }).then(bar);
+            osReady.then(function (OS) { return OS.Notifications.requestPermission(); }).then(function () {
+              if (Notification.permission === 'denied') alert('เบราว์เซอร์บล็อกการแจ้งเตือนไว้ — กดรูปแม่กุญแจข้างช่อง URL แล้วเปิด "การแจ้งเตือน"');
+              bar();
+            }).catch(function (e) { alert('เปิดแจ้งเตือนไม่สำเร็จ: ' + (e && e.message || e)); });
           });
         show(null);
       }
